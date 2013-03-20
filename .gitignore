@@ -1,0 +1,13 @@
+desc/auto/
+desc/*.aux
+desc/*.bbl
+desc/*.blg
+desc/*.log
+desc/*.out
+desc/*.pyg
+desc/*.synctex.gz
+target/
+.lein-failures
+results/Test*.xmi
+results/Test*.pdf
+.lein-repl-history
