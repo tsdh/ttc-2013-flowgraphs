@@ -276,14 +276,11 @@
              ["i--;"            "i--;"]
              ["i--;"            "return i;"]})
 
-(make-test test-fg-transform-test7 "models/Test7.java.xmi"
-           512 961)
+(make-test test-fg-transform-test7 "models/Test7.java.xmi" 512 961)
 
-(make-test test-fg-transform-test8 "models/Test8.java.xmi"
-           1702 3202)
+(make-test test-fg-transform-test8 "models/Test8.java.xmi" 1702 3202)
 
-(make-test test-fg-transform-test9 "models/Test9.java.xmi"
-           14452 27202)
+(make-test test-fg-transform-test9 "models/Test9.java.xmi" 14452 27202)
 
 (make-test test-fg-transform-test10 "models/Test10.java.xmi"
            #{["testMethod()" "a < 0"]
