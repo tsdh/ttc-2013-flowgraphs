@@ -30,15 +30,13 @@
                              ".java.xmi" ".xmi")
         outvizfile (str/replace outfile ".xmi" ".pdf")
         fg-trg (new-model)]
-    (time (do
-            (println "Execution Times:")
-            (print "  - JaMoPP to StructureGraph (with Vars): ")
-            (time (java2flowgraph jamopp-model fg-trg))
-            (print "  - Control Flow Analysis:                ")
-            (time (synthesize-cf-edges fg-trg))
-            (print "  - Data Flow Analysis:                   ")
-            (time (synthesize-df-edges fg-trg))
-            (print "=> Overall Time: ")))
+    (println "Execution Times:")
+    (print "  - JaMoPP to StructureGraph (with Vars): ")
+    (time (java2flowgraph jamopp-model fg-trg))
+    (print "  - Control Flow Analysis:                ")
+    (time (synthesize-cf-edges fg-trg))
+    (print "  - Data Flow Analysis:                   ")
+    (time (synthesize-df-edges fg-trg))
     (save-model fg-trg outfile)
     (when (< (count (eallobjects fg-trg)) 80)
       (print-model fg-trg outvizfile))
@@ -48,7 +46,6 @@
 
 (defmacro make-test [n file expected-cfs expected-dfs]
   `(deftest ~n
-     (System/gc)
      (println "========================================================================")
      (let [fg-trg# (run-flowgraph-transformations ~file)
            exp-cfs# ~expected-cfs

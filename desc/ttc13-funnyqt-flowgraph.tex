@@ -212,7 +212,7 @@ aka \verb|-=|), because they don't occur in the provided input models.
 
 All in all, the polymorphic \verb|stmt2str| function consists of 22
 implementations for various JaMoPP metamodel types accounting to a total of
-about 110 lines of code.
+about 120 lines of code.
 
 
 \subsection{JaMoPP to Structure Graph}
@@ -236,10 +236,11 @@ Before going into the details of the transformation, one helper function
 
 It takes a JaMoPP statement \verb|s| and returns the set of variables used
 inside this statement.  \verb|reachables| gets an element and regular path
-expression specifying the structure of paths that may be traversed.  Here, the
-path expression specifies that from \verb|s| zero or many (\verb|p-*|)
-containment references from container to child (\verb|<>--|) may be traversed.
-The intermediate results are then filtered to elements of type
+expression, and it returns the set of elements that can be reached by
+traversing paths matching the regular path expression.  Here, the path
+expression specifies that from \verb|s| zero or many (\verb|p-*|) containment
+references from container to child (\verb|<>--|) may be traversed.  The
+intermediate results are then filtered to elements of type
 \verb|IdentifierReference|, and from those the \verb|target| reference is
 traversed leading to a variable.
 
@@ -254,10 +255,10 @@ There could be arbitrary many input and output models, and they could be of
 different kinds, e.g., a transformation could receive a JGraLab TGraph and some
 EMF model, and create an output EMF model.  Here, it gets only the JaMoPP EMF
 input model which is bound the the variable \verb|in|, and one single structure
-graph output model bound to \verb|out|.
+graph output model bound to \verb|out|, which is also an EMF model.
 
-In the body of such a transformation, arbitrary rules may be declared.  The
-first rule is the \verb|method2method| rule shown in the next listing.  The
+In the body of such a transformation, arbitrary many rules may be declared.
+The first rule is the \verb|method2method| rule shown in the next listing.  The
 \verb|^:top| metadata preceeding the rule name specifies that the rule is a
 top-level rule.  Such rules are applied to all matching elements by the
 transformation itself, whereas non-top-level rules have to be called explicitly
@@ -298,16 +299,16 @@ The method's \verb|stmts| reference is set by applying another rule,
 \verb|stmt2item|, to the statements of the JaMoPP method.  The higher-order
 function \verb|map| takes a function and a collection and applies the function
 to every element of the collection returning a sequence of function results.
-
 Similarly, the method's parameters are transformed by mapping them to the
 \verb|param2param| rule for setting the method's \verb|def| reference.
 
 When a rule is called and is applicable, the elements specified in the
-\verb|:to| clause are created, the body is evaluated, a mapping from input
-element to output elements is created, and a vector containing the newly
-created elements in the order of their declaration in \verb|:to| is returned.
-As a special case, if a rule creates only one target element, the mapping is
-from input element to that output element.
+\verb|:to| clause are created, the body is evaluated, a vector containing the
+newly created elements in the order of their declaration in \verb|:to| is
+returned, and a mapping from input element to returned result is created.  As a
+special case, if a rule creates only one target element, the mapping is from
+input element to that output element instead to a vector containing only one
+output element.
 
 When the rule is applied another time for the same input element, it simply
 returns the result of the first application without creating anything new.
@@ -324,7 +325,7 @@ next listing.
 
 This is quite similar to mapping disjunction in QVT Operational Mappings.  When
 this rule is called, the rules specified in the \verb|:generalizes| vector are
-tried one after the other, and the first applicable one is applied and its
+tried one after the other, and the first applicable one is applied, and its
 result is returned.  The rules are ordered from most specific to most lax, and
 the last rule, \verb|stmt2simple-stmt| is a catch-all rule applicable to any
 JaMoPP statement.
@@ -370,7 +371,7 @@ Likewise, if the statement \verb|s| contains or is a
 JaMoPP variable being modified.
 
 The complete \verb|java2flowgraph| model-to-model transformation consists of 15
-rules with 89 lines of code in total.
+rules with 94 lines of code in total.
 
 
 
@@ -411,17 +412,20 @@ possibly nested composite statement.  For example, when it is called for a
 label containing a block whose first statement is a loop, it will return the
 the expression which is the loop's condition.
 
-The function synthesizing the control flow links is named \verb|cf-synth| using
-the algorithm sketched above will be explained in the next listings.  It
-receives the sequence of statements \verb|v|, the method's \verb|Exit| node
-\verb|exit|, the current loop's \verb|loop-expr|, the statement following the
-current loop \verb|loop-succ|, and a map \verb|label-succ-map| that assigns to
-each label reachable in the current scope the statement following the labeled
-statement.  The \verb|exit| parameter is used for handling return statements,
-and the last three parameters are used for handling break and continue
-statements.  Initially, the function is called with \verb|v| only containing
-the method, and \verb|exit| bound to that method's exit.  All other parameters
-are \verb|nil|.
+\verb|recur| is a Clojure special form enabling a tail-recursion that doesn't
+consume space on the call stack.  If \verb|recur| doesn't occur in
+tail-position, the Clojure compiler will throw an exception.
+
+The function \verb|cf-synth| synthesizing the control flow links using the
+algorithm sketched above will be explained in the next listings.  It receives
+the sequence of statements \verb|v|, the method's \verb|Exit| node \verb|exit|,
+the current loop's \verb|loop-expr|, the statement following the current loop
+\verb|loop-succ|, and a map \verb|label-succ-map| that assigns to each label
+reachable in the current scope the statement following the labeled statement.
+The \verb|exit| parameter is used for handling return statements, and the last
+three parameters are used for handling break and continue statements.
+Initially, the function is called with \verb|v| only containing the method, and
+\verb|exit| bound to that method's exit.  All other parameters are \verb|nil|.
 
 \begin{clojurecode*}{firstnumber=5}
 (defn cf-synth [v exit loop-expr loop-succ label-succ-map]
@@ -439,9 +443,7 @@ structure is known as \emph{destructuring} in the Lisp-world.
 After binding these elements, a \verb|type-case| dispatches on \verb|el|'s
 metamodel type.  If the element is a method, a control flow link to that
 method's first flow instruction is created, and the function recurses with the
-method's statements.  \verb|recur| is a Clojure special form enabling a
-tail-recursion that doesn't consume space on the call stack.  If \verb|recur|
-doesn't occur in tail-position, the Clojure compiler will throw an exception.
+method's statements.
 
 \begin{clojurecode*}{firstnumber=9}
         'flowgraph.Method
@@ -505,7 +507,7 @@ unchanged parameters.
 \end{clojurecode*}
 
 If the current element is a break statement, two cases have to be
-destinguished.  If the break is labled, a control flow link is added to the
+distinguished.  If the break is labled, a control flow link is added to the
 first flow instruction of the statement following the label.  The statement
 following the label is looked up in the \verb|label-succ-map|.
 
@@ -572,9 +574,7 @@ expression to the first flow instruction in the then-statement, and the final
 non-return/break/continue flow instructions in the then-statement will be
 connected to the first flow instruction following the if-statement.  Note that
 this call is done by calling the function itself rather than \verb|recur|,
-because the call is not in tail-position.  As a result, deeply nested
-if-statements could produce stack-overflows in theory.  However, the nesting
-would need to exceed at least 3000 levels with standard JVM settings in order.
+because the call is not in tail-position.
 
 \begin{sloppypar}
   Depending on wether the if-statement has an else-part, the function then
@@ -714,7 +714,7 @@ should print all false links, i.e., links occuring in the model but not in the
 specification.
 
 Before digging into the FunnyQT solution's implementation of this task, the
-next listing shows the specification of the \verb|Test0.java.xmi| model.
+next listing shows the specification for the \verb|Test0.java.xmi| model.
 
 \begin{clojurecode*}{linenos=false}
 (make-test test-fg-transform-test0 "models/Test0.java.xmi"
@@ -742,8 +742,8 @@ next listing shows the specification of the \verb|Test0.java.xmi| model.
 \verb|make-test| is the entry point to the validation DSL.  It creates a new
 test case with the given name (e.g., \verb|test-fg-transform-test0|) which
 tests some concrete model whose XMI file is provided.  Then, a set of expected
-\verb|cfNext| and expected \verb|dfNext| links follow.  Every link is
-represented as a vector containing the expected source and target flow
+\verb|cfNext| links and a set of expected \verb|dfNext| links follow.  Every
+link is represented as a vector containing the expected source and target flow
 instructions, every flow instruction being represented as string of its
 concrete Java syntax.  These strings identify the flow instructions
 unambiguously, because in the test cases, no statement occurs more than once.
@@ -808,25 +808,25 @@ macro arguments.
 \end{clojurecode}
 
 In line 2, \verb|make-test| generates a new unit test with the name given as
-parameter \verb|n|.  In line 3, the transformations are run
-transformation\footnote{\textsf{run-flowgraph-transformations} is a function
-  that takes a model file and applies the 3 transformations one after the other
-  returning the final program dependence graph.  It also times the execution,
-  saves the result model, and generates visualizations for smaller models.} and
-the result model is bound to a variable.  Likewise, the expected links are
-bound to variables.  Lines 6 and 8 bind the links actually contained in the
-model to variables.  The FunnyQT function \verb|ecrosspairs| returns the
-sequence of crosslinks restricted to those matching given source and target
-reference names.  Each link is represented as a vector of source and target
-element.  Using \verb|map|, these links are converted to the form of the links
-in the sets of expected links, i.e., every link is represented by a vector of
-the source and target element's \verb|txt| attribute.
+parameter \verb|n|.  In line 3, the transformations are
+run\footnote{\textsf{run-flowgraph-transformations} is a function that takes a
+  model file and applies the 3 transformations one after the other returning
+  the final program dependence graph.  It also times the execution, saves the
+  result model, and generates visualizations for smaller models.}, and the
+result model is bound to a variable.  Likewise, the expected links are bound to
+variables.  Lines 6 and 8 bind the links actually contained in the model to
+variables.  The FunnyQT function \verb|ecrosspairs| returns the sequence of
+crosslinks restricted to those matching given source and target reference
+names.  Each link is represented as a vector of source and target element.
+Using \verb|map|, these links are converted to the form of the links in the
+sets of expected links, i.e., every link is represented by a vector of the
+source and target element's \verb|txt| attribute.
 
-In lines 11 to 18 and lines 20 to 27, the differences between expected and
+In lines 11 to 18 and lines 20 to 27, the set differences between expected and
 actual links and vice versa are calculated.  Both should be empty, else there
 are either missing or too many links.  \verb|is| is similar to JUnit's
 \verb|Assert.assertTrue()| method.  In case the expected links were provided as
-a number, only actual number of links is validated against it.
+a number, only the actual number of links is validated against it.
 
 
 \section{Running the Transformation on SHARE}
@@ -861,8 +861,6 @@ In this section, the FunnyQT solution to the Flowgraphs case is evaluated
 according to the critera listed in the case description
 \cite{flowgraphcasedesc}.
 
-\paragraph{Completeness and correctness.}
-
 All tasks have been solved, and the results of every task are complete and
 correct.  For all smaller input models, the expected control and data flow
 links have been derived from the Java code manually.  They match exactly the
@@ -874,12 +872,8 @@ larger test models were generated by duplicating the body of the method in
 \verb|Test6.java|, the expected number of control and data flow links could be
 calculated.
 
-
-\paragraph{Conciseness and understandability.}
-
 Table\ref{tab:eval-quantity} depicts the amount of lines of code (including
 empty lines) for the solutions to the four tasks.
-
 
 \begin{table}[h!]
   \centering
@@ -891,7 +885,7 @@ empty lines) for the solutions to the four tasks.
     \textbf{Task 1 (M2T)} & 129\\
     \textbf{Task 2} & 57\\
     \textbf{Task 3} & 19\\
-    \textbf{Task 4} & 52\\
+    \textbf{Task 4} & 49\\
     \hline
     \textbf{Total} & 351\\
     \hline
@@ -916,19 +910,43 @@ and with 57 LOC also quite concise.
 The data flow analysis task is an easy task anyway, so its conciseness of only
 19 LOC isn't too astonishing.
 
-The implementation of the validation task 4 consists of 52 LOC, plus another
+The implementation of the validation task 4 consists of 49 LOC, plus another
 244 LOC of specifications for the eleven provided test cases.
 
-\paragraph{Efficiency.}
+Table\ref{tab:eval-perf} shows the execution times on SHARE of the
+transformations implementing task 1 to 3 for all provided models.  The model
+\verb|Test9.java.xmi| is the largest model.  It consists of approximately 50000
+model elements.  It takes 2.7 seconds to transform that into a simpler
+flowgraph model consisting of 20000 elements.  The solution of task 2 then
+needs 225 milliseconds to synthesize about 15000 control flow links, and the
+data flow transformation needs another 1.2 seconds to synthesize about 27000
+data flow links.
 
 \begin{table}[h!]
   \centering
   \begin{tabular}{| l | r | r | r | r |}
-    
+    \hline
+    \textbf{Model} & \textbf{Task 1} & \textbf{Task 2} & \textbf{Task 3} & \textbf{Total}\\
+    \hline
+    \textbf{Test0} & 15.8 ms & 0.5 ms & 1.7 ms & 18.0 ms\\
+    \textbf{Test1} & 7.6 ms & 0.7 ms & 3.1 ms & 11.4 ms\\
+    \textbf{Test2} & 7.3 ms & 0.6 ms & 2.3 ms & 10.2 ms\\
+    \textbf{Test3} & 6.4 ms & 4.2 ms & 2.3 ms & 12.9 ms\\
+    \textbf{Test4} & 2.6 ms & 0.2 ms & 0.4 ms & 3.2 ms\\
+    \textbf{Test5} & 2.2 ms & 0.2 ms & 0.9 ms & 3.3 ms\\
+    \textbf{Test6} & 3.9 ms & 0.3 ms & 1.3 ms & 5.5 ms\\
+    \textbf{Test7} & 107.2 ms & 7.0 ms & 49.4 ms & 163.6 ms\\
+    \textbf{Test8} & 505.5 ms & 57.9 ms & 240.1 ms & 803.5 ms\\
+    \textbf{Test9} & 2697.8 ms & 224.7 ms & 1222.6 ms & 4165.1 ms\\
+    \textbf{Test10} & 5.7 ms & 0.6 ms & 0.9 ms & 7.2 ms\\
+    \textbf{Test11} & 1.5 ms & 0.2 ms & 0.3 ms & 2.0 ms\\
+    \hline
   \end{tabular}
   \caption{Transformation execution times}
   \label{tab:eval-perf}
 \end{table}
+
+
 
 \bibliographystyle{alpha}
 \bibliography{ttc13-funnyqt-flowgraph}
