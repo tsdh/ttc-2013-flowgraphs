@@ -780,7 +780,7 @@ macro arguments.
 \begin{clojurecode}
 (defmacro make-test [n file expected-cfs expected-dfs]
   `(deftest ~n
-     (let [fg-trg# (run-transformations ~file)
+     (let [fg-trg# (run-flowgraph-transformations ~file)
            exp-cfs# ~expected-cfs
            exp-dfs# ~expected-dfs
            cfs# (set (map (fn [[s# t#]] [(eget s# :txt) (eget t# :txt)])
@@ -809,18 +809,18 @@ macro arguments.
 
 In line 2, \verb|make-test| generates a new unit test with the name given as
 parameter \verb|n|.  In line 3, the transformations are run
-transformation\footnote{\textsf{run-transformations} is a function that takes a
-  model file and applies the 3 transformations one after the other returning
-  the final program dependence graph.  It also times the execution, saves the
-  result model, and generates visualizations for smaller models.} and the
-result model is bound to a variable.  Likewise, the expected links are bound to
-variables.  Lines 6 and 8 bind the links actually contained in the model to
-variables.  The FunnyQT function \verb|ecrosspairs| returns the sequence of
-crosslinks restricted to those matching given source and target reference
-names.  Each link is represented as a vector of source and target element.
-Using \verb|map|, these links are converted to the form of the links in the
-sets of expected links, i.e., every link is represented by a vector of the
-source and target element's \verb|txt| attribute.
+transformation\footnote{\textsf{run-flowgraph-transformations} is a function
+  that takes a model file and applies the 3 transformations one after the other
+  returning the final program dependence graph.  It also times the execution,
+  saves the result model, and generates visualizations for smaller models.} and
+the result model is bound to a variable.  Likewise, the expected links are
+bound to variables.  Lines 6 and 8 bind the links actually contained in the
+model to variables.  The FunnyQT function \verb|ecrosspairs| returns the
+sequence of crosslinks restricted to those matching given source and target
+reference names.  Each link is represented as a vector of source and target
+element.  Using \verb|map|, these links are converted to the form of the links
+in the sets of expected links, i.e., every link is represented by a vector of
+the source and target element's \verb|txt| attribute.
 
 In lines 11 to 18 and lines 20 to 27, the differences between expected and
 actual links and vice versa are calculated.  Both should be empty, else there
@@ -852,9 +852,28 @@ JaMoPP models and print the execution times.  The result models and
 visualizations of the main test cases' results are saved to the \verb|results|
 directory.
 
+
 \section{Evaluation}
 \label{sec:evaluation}
 
+\begin{table}[h!]
+  \centering
+  \begin{tabular}{| l | r |}
+    \hline
+    \textbf{Implementation} & \textbf{NCLOC}\\
+    \hline
+    \textbf{Task 1 (M2M)} & 94\\
+    \textbf{Task 1 (M2T)} & 129\\
+    \textbf{Task 2} & 57\\
+    \textbf{Task 3} & 19\\
+    \textbf{Task 4} & 52\\
+    \hline
+    \textbf{Total} & 351\\
+    \hline
+  \end{tabular}
+  \caption{Quantity of the transformations}
+  \label{tab:eval-quantity}
+\end{table}
 
 
 \bibliographystyle{alpha}

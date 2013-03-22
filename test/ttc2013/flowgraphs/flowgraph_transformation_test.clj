@@ -21,7 +21,7 @@
   (println "Warmup done!")
   (println))
 
-(defn run-transformations [file]
+(defn run-flowgraph-transformations [file]
   (System/gc)
   (println "Running Transformation on" file)
   (print "Load Time: ")
@@ -50,7 +50,7 @@
   `(deftest ~n
      (System/gc)
      (println "========================================================================")
-     (let [fg-trg# (run-transformations ~file)
+     (let [fg-trg# (run-flowgraph-transformations ~file)
            exp-cfs# ~expected-cfs
            exp-dfs# ~expected-dfs
            cfs# (set (map (fn [[s# t#]] [(eget s# :txt) (eget t# :txt)])
