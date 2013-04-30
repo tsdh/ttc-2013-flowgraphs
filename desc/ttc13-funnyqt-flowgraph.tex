@@ -355,19 +355,23 @@ It receives a JaMoPP statement \verb|s|, creates a new \verb|SimpleStmt|
 polymorphic \verb|stmt2str| function.
 
 The remainder of the rule deals with setting the new simple statement's
-\verb|def| and \verb|use| references.  If the statement contains assignment
-expressions such as \verb|a = b + c|, the flowgraph var corresponding to the
-assigned variable of each such expression is added to the statement's
-\verb|def| reference.  \verb|var-creating-rule| is another rule generalizing
-the two rules transforming JaMoPP method parameters and local variables to
-flowgraph \verb|Param| and \verb|Var| objects, respectively.  The \verb|def|
-reference is set to the flowgraph vars corresponding to the variables used in
-the \verb|value| expression of the assignment expression.  Because the regular
-path expression in line 23 uses the zero-or-many iteration \verb|p-*|, it might
-also be that \verb|s| doesn't contain an assignment statement but it is an
-assignment statement itself.
+\verb|def| and \verb|use| references.  The variable \verb|aex| iterates over
+all assignment expressions\footnote{Clojure's \textsf{doseq} is similar to
+  Java's enhanced for-each loop, but it also allows for nested iterations.}
+inside of the statement \verb|s| and adds the defined variable to the new
+simple statement's \verb|def| reference, and the variables providing the value
+to the \verb|use| reference.  \verb|var-creating-rule| is another rule
+generalizing the two rules transforming JaMoPP method parameters and local
+variables to flowgraph \verb|Param| and \verb|Var| objects, respectively.  The
+regular path expression used for finding assignment expressions in line 23
+reads: from \verb|s| traverse zero-or-many containment references in the
+direction from container to contained elements, and then restrict all those
+reachable elements to those of type \verb|AssignmentExpression|.  Because it
+uses the zero-or-many iteration \verb|p-*|, it might also be that \verb|s|
+doesn't contain an assignment statement but it is an assignment statement
+itself.
 
-Likewise, if the statement \verb|s| contains or is a
+Likewise starting with line 27, if the statement \verb|s| contains or is a
 \verb|UnaryModificationExpression| such as \verb|i++|, the \verb|def| and
 \verb|use| references are set to the flowgraph var element corresponding to the
 JaMoPP variable being modified.
@@ -658,9 +662,12 @@ control flow predecessors that define that variable.
 In Clojure, \verb|loop| and \verb|recur| implement a local tail-recursion, that
 is, inside a \verb|loop| a \verb|recur| form recurses not to the surrounding
 function but to the surrounding \verb|loop|.  Initially, \verb|preds| is bound
-to the immediate control flow predecessors of \verb|fi|, the result variable
-\verb|r| is bound to the empty vector, and \verb|known| is bound to the empty
-set.
+to the immediate control flow predecessors of
+\verb|fi|\footnote{\texttt{mapcat} gets a function and a collection, where the
+  function has to result in a collection again.  It applies the function to
+  every element of the collection concatenating the results.}, the result
+variable \verb|r| is bound to the empty vector, and \verb|known| is bound to
+the empty set.
 
 If there are no predecessors, the result \verb|r| is returned (the else-branch
 of the if).  If there are control flow predecessors, those are sorted into
@@ -677,11 +684,9 @@ vector \verb|r| is rebound to the current \verb|r| value plus the new
 
 The function \verb|synthesize-df-edges| shown in the next listing is the entry
 point to the data flow analysis receiving the flowgraph model.  It performs a
-nested iteration\footnote{Clojure's \textsf{doseq} is similar to Java's
-  enhanced for-each loop, but it also allows for nested iterations.} over all
-flow instructions, the variables used by them, and the definers of these used
-variables.  A data flow link is added from every nearest definer to the flow
-instruction.
+nested iteration over all flow instructions, the variables used by them, and
+the definers of these used variables.  A data flow link is added from every
+nearest definer to the flow instruction.
 
 \begin{clojurecode*}{firstnumber=12}
 (defn synthesize-df-edges [model]
