@@ -268,14 +268,14 @@ from a top-level rule (directly or indirectly).
 
 \begin{clojurecode*}{firstnumber=6}
   (^:top method2method [m]
-      :from 'members.ClassMethod
-      :when-let [mstmts (seq (eget m :statements))]
-      :to [fgm 'flowgraph.Method, ex 'flowgraph.Exit]
-      (eset! fgm :txt (stmt2str m))
-      (eset! ex :txt "Exit")
-      (eset! fgm :stmts (map stmt2item mstmts))
-      (eset! fgm :exit ex)
-      (eset! fgm :def (map param2param (eget m :parameters))))
+         :from 'members.ClassMethod
+         :when-let [mstmts (seq (eget m :statements))]
+         :to [fgm 'flowgraph.Method, ex 'flowgraph.Exit]
+         (eset! fgm :txt (stmt2str m))
+         (eset! ex :txt "Exit")
+         (eset! fgm :stmts (map stmt2item mstmts))
+         (eset! fgm :exit ex)
+         (eset! fgm :def (map param2param (eget m :parameters))))
 \end{clojurecode*}
 
 It receives a model element \verb|m| which must be of type \verb|ClassMethod|
