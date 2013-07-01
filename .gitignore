@@ -6,6 +6,15 @@ desc/*.log
 desc/*.out
 desc/*.pyg
 desc/*.synctex.gz
+postproc/auto/
+postproc/*.aux
+postproc/*.bbl
+postproc/*.blg
+postproc/*.log
+postproc/*.out
+postproc/*.pyg
+postproc/*.pag
+postproc/*.synctex.gz
 target/
 .lein-failures
 results/Test*.xmi

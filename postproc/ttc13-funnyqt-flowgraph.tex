@@ -1,0 +1,395 @@
+\documentclass[submission]{eptcs}
+\providecommand{\event}{Transformation Tool Contest 2013 (TTC'13)}
+\def\titlerunning{Solving the TTC 2013 Flowgraphs Case with FunnyQT}
+\def\authorrunning{Tassilo Horn}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{paralist}
+\usepackage{verbatim}
+
+\makeatletter
+\def\verbatim@font{\ttfamily\small}
+\makeatother
+
+\usepackage{minted}
+\newminted{clojure}{fontsize=\footnotesize}
+
+
+\title{Solving the TTC 2013 Flowgraphs Case with FunnyQT}
+\author{Dipl.-Inform. Tassilo Horn
+  \email{horn@uni-koblenz.de}
+  \institute{Institute for Software Technology, University Koblenz-Landau, Germany}}
+
+\clubpenalty = 10000
+\widowpenalty = 10000
+\displaywidowpenalty = 10000
+
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+  This paper describes the FunnyQT solution to the TTC 2013 Flowgraphs
+  Transformation Case.
+
+  FunnyQT is a model querying and model transformation library for the
+  functional Lisp-dialect Clojure providing a rich and efficient querying and
+  transformation API.
+
+  The FunnyQT solution of the Flowgraphs case solves all four tasks, and it has
+  won the \emph{best efficiency award} for this case.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+\emph{FunnyQT} is a new model querying and transformation approach which is
+implemented as an API for the functional, JVM-based Lisp-dialect Clojure.  It
+provides several sub-APIs for implementing different kinds of queries and
+transformations.  For example, there is a model-to-model transformation API,
+and there is an in-place transformation API for writing programmed graph
+transformations.
+
+For solving the tasks of this transformation case\footnote{This FunnyQT
+  solution is available at \url{https://github.com/tsdh/ttc-2013-flowgraphs}
+  and on SHARE (image \textsf{TTC13::Ubuntu12LTS\_TTC13::FunnyQT.vdi}},
+FunnyQT's model transformation API and its polymorphic function API have been
+used for task~1.  Both task~2 and task~3 have been tackled algorithmically
+using FunnyQT's plain querying and model manipulation APIs.  Task~4 has been
+solved by using FunnyQT's querying API and Clojure metaprogramming.
+
+\section{Solution Description}
+\label{sec:solution-description}
+
+
+\paragraph{Task 1: JaMoPP to StructureGraph.}
+\label{sec:task-1}
+
+According to the case description \cite{flowgraphcasedesc}, the goal of this
+task is to transform a fine-granular Java syntax graph conforming to the JaMoPP
+metamodel \cite{jamopp09} into a much simpler structure graph model that only
+contains statements and expressions that are neither structured nor subdivided
+any further.  However, the original Java code of these statements and
+expressions should be reflected in the new elements' \verb|txt| attribute.
+This model-to-text transformation is described in
+Section~\ref{sec:jamopp-text}.  Thereafter, the model-to-model transformation
+creating a structure graph from a JaMoPP model is described in
+Section~\ref{sec:jamopp-struct-graph}.
+
+
+\subparagraph{JaMoPP to Text.}
+\label{sec:jamopp-text}
+
+This model-to-text transformation is implemented using FunnyQT's polymorphic
+function API.  A polymorphic function is a function that is declared once, and
+then arbitrary many implementations for concrete metamodel types can be added.
+When a polymorphic function is called, the actual implementation is determined
+similarly to the typical dispatch in object-oriented programming languages.  If
+there's no implementation provided for the element's type or one of its
+supertypes, an exception is thrown.
+
+The function \verb|stmt2str| implements the model-to-text transformation
+required for solving task~1.  It is declared as follows.
+
+\begin{clojurecode}
+(declare-polyfn stmt2str [elem])
+\end{clojurecode}
+
+\verb|declare-polyfn| declares a new polymorphic function.  Its name is
+\verb|stmt2str|, and it receives exactly one parameter \verb|elem|.  It's task
+is to create a string representation matching the concrete Java syntax for the
+provided JaMoPP model element.
+
+After the polymorphic function has been declared, implementations for concrete
+metamodel types can be added using \verb|defpolyfn|.  For example, this is the
+implementation for JaMoPP elements of type \verb|AssignmentExpression|:
+
+\begin{clojurecode}
+(defpolyfn stmt2str 'expressions.AssignmentExpression [ae]
+  (str (stmt2str (eget ae :child)) " "
+       (stmt2str (eget ae :assignmentOperator)) " "
+       (stmt2str (eget ae :value))))
+\end{clojurecode}
+
+The \verb|child| of the assignment expression is some variable, the assignment
+operator is one of \verb|=|, \verb|+=|, \verb|-=|, \verb|*=|, or \verb|/=|, and
+\verb|value| is an arbitrary expression.  These three components are converted
+to strings recursively which are then concatenated.
+
+All in all, the polymorphic \verb|stmt2str| function consists of 22
+implementations for various JaMoPP metamodel types accounting to a total of
+about 120 lines of code.
+
+
+\subparagraph{JaMoPP to Structure Graph.}
+\label{sec:jamopp-struct-graph}
+
+The model-to-model transformation part of task~1 is implemented using FunnyQT's
+model-to-model transformation API.  This transformation also creates \verb|Var|
+and \verb|Param| objects as requested by task~3.1.
+
+The transformation starts by defining its name and input and output models.
+
+\begin{clojurecode*}{firstnumber=5}
+(deftransformation java2flowgraph [[in :emf] [out :emf]]
+\end{clojurecode*}
+
+There could be arbitrary many input and output models, and they could be of
+different kinds, e.g., a transformation could receive a JGraLab TGraph and some
+EMF model, and create an output EMF model.  Here, it gets only the JaMoPP EMF
+input model which is bound the the variable \verb|in|, and one single structure
+graph output model bound to \verb|out|, which is also an EMF model.
+
+In the body of such a transformation, arbitrary many rules may be declared.
+The first rule is the \verb|method2method| rule shown in the next listing.  The
+\verb|^:top| metadata preceeding the rule name specifies that the rule is a
+top-level rule.  Such rules are applied to all matching elements by the
+transformation itself, whereas non-top-level rules have to be called explicitly
+from a top-level rule (directly or indirectly).
+
+\begin{clojurecode*}{firstnumber=6}
+  (^:top method2method [m]
+         :from 'members.ClassMethod
+         :to [fgm 'flowgraph.Method, ex 'flowgraph.Exit]
+         (eset! fgm :txt (stmt2str m)) ;; Invoke the model-to-text transformation
+         (eset! ex :txt "Exit")
+         (eset! fgm :exit ex)
+         (eset! fgm :stmts (map stmt2item (eget m :statements)))
+         (eset! fgm :def (map param2param (eget m :parameters))))
+\end{clojurecode*}
+
+It receives a model element \verb|m|.  The \verb|:from| clause dictates that
+\verb|m| must be of type \verb|ClassMethod| in order for the rule to be
+applicable.  The \verb|:to| clause declares the objects to be created.  Here,
+for a given JaMoPP method, a corresponding flowgraph method and its exit object
+are created.  The remainder of the rule is its body.  Here, the \verb|txt|
+attribute of the new method and its exit are set, the former using the
+polymorphic \verb|stmt2str| function discussed in
+Section~\ref{sec:jamopp-text}.  The method's \verb|stmts| reference is set by
+applying another rule, \verb|stmt2item|, to the statements of the JaMoPP
+method.  Likewise, the method's parameters are transformed by mapping them to
+the \verb|param2param| rule for setting the method's \verb|def| reference.
+
+A special kind of rules are generalizing rules such as the one shown in the
+next listing.
+
+\begin{clojurecode*}{firstnumber=15}
+  (stmt2item [stmt]
+      :generalizes [local-var-stmt2simple-stmt condition2if block2block
+                    return2return while-loop2loop break2break continue2continue
+                    label2label stmt2simple-stmt])
+\end{clojurecode*}
+
+This concept is quite similar to mapping disjunction in QVT Operational
+Mappings.  When this rule is called, the rules specified in the
+\verb|:generalizes| vector are tried one after the other, and the first
+applicable one is applied, and its result is returned.
+
+The complete \verb|java2flowgraph| model-to-model transformation consists of 15
+rules with 94 lines of code in total.
+
+
+\paragraph{Task 2: Control Flow Analysis.}
+\label{sec:task-2}
+
+The purpose of this task is to create \verb|cfNext| links between
+\verb|FlowInstr| elements in the flowgraph model created by the model-to-model
+transformation realizing task~1.  Every such flow instruction should be
+connected to every other flow instruction that may be the next one in the
+program's control flow.  This challenge has been tackled algorithmically using
+FunnyQT's plain quering and model manipulation APIs.
+
+The algorithm uses a sequence of statements as intermediate representation to
+work on realizing a pre-order depth-first traverlal with look-ahead through the
+method's statements.  In the general case, every flow instruction in that
+sequence has to be connected with the immediately following flow instruction in
+the sequence.  For various kinds of statements, special rules are needed.  For
+example, when encountering a block in the sequence (which is no flow
+instruction), the the block is replaced with its contents.
+
+Since the next statement in the sequence might not be a flow instruction but
+some structured statement like a block, an if-statement, or a loop, there's a
+helper function \verb|cf-peek|.  It receives some element and returns either
+this element if it is a flow instruction, or otherwise the first flow
+instruction inside this element.
+
+The function \verb|cf-synth| synthesizing the control flow links using the
+algorithm sketched above is explained in the next listings.  It receives the
+sequence of statements \verb|v|, the method's \verb|Exit| node \verb|exit|, the
+current loop's \verb|loop-expr|, the statement following the current loop
+\verb|loop-succ|, and a map \verb|label-succ-map| that assigns to each label
+reachable in the current scope the statement following the labeled statement.
+The \verb|exit| parameter is used for handling return statements, and the last
+three parameters are used for handling break and continue statements.
+Initially, the function is called with \verb|v| only containing the method, and
+\verb|exit| bound to that method's exit.  All other parameters are \verb|nil|.
+
+\begin{clojurecode*}{firstnumber=5}
+(defn cf-synth [v exit loop-expr loop-succ label-succ-map]
+  (when (seq v)
+    (let [[el & [n & _ :as tail]] v]
+      (type-case el
+\end{clojurecode*}
+
+If the sequence \verb|v| is not empty, its first element is bound to \verb|el|,
+and its rest is bound to \verb|tail|.  Furthermore, the first element of the
+rest (i.e., the second element of the sequence) is bound to \verb|n|.
+
+After binding these elements, a \verb|type-case| dispatches on \verb|el|'s
+metamodel type.  For example, if the element is a method, a control flow link
+to that method's first flow instruction is created, and the function recurses
+with the method's statements.
+
+\begin{clojurecode*}{firstnumber=9}
+        'flowgraph.Method (let [stmts (econtents el)]
+                            (eadd! el :cfNext (cf-peek (first stmts)))
+                            (recur stmts exit nil nil nil))
+\end{clojurecode*}
+
+If the current element is a label, the function recurses with that label's
+statement prepended to the tail of the sequence.  A mapping from this label to
+its following statement is added to the \verb|label-succ-map|.  This
+statement's first flow instruction is where the control flow continues when
+breaking to this label.
+
+\begin{clojurecode*}{firstnumber=22}
+        'flowgraph.Label (recur (cons (eget el :stmt) tail) exit loop-expr loop-succ
+                                (assoc label-succ-map el n))
+\end{clojurecode*}
+
+If the current element is a break statement, two cases have to be
+distinguished.  If the break is labled, a control flow link is added to the
+first flow instruction of the statement following the label which can be looked
+up in the \verb|label-succ-map|.
+
+If the break is not labled, a control flow link is added to the first flow
+instruction in the statement following the surrounding loop which is bound to
+\verb|loop-succ|.
+
+In any case, the function recurses with the tail of the sequence keeping all
+other parameters as-is.
+
+\begin{clojurecode*}{firstnumber=28}
+        'flowgraph.Break (do (if-let [l (eget el :label)]
+                               (eadd! el :cfNext (cf-peek (label-succ-map l)))
+                               (eadd! el :cfNext (cf-peek loop-succ)))
+                           (recur tail exit loop-expr loop-succ label-succ-map))
+\end{clojurecode*}
+
+There are similar cases for handling objects of the other metamodel types.  The
+complete control flow transformation consists of 55 lines of code.
+
+
+\paragraph{Task 3: Data Flow Analysis.}
+\label{sec:task-3}
+
+The purpose of this task is to create \verb|dfNext| links between
+\verb|FlowInst| elements where the target element is a control flow successor
+of the source element, the target element uses (reads) a variable that was
+defined (written) by the source element, and the variable hasn't been rewritten
+in between.  This definition has been implemented exactly as stated here,
+because although it's not the most efficient algorithm for the task, it is very
+clear and concise.
+
+The function \verb|find-nearest-definers| receives a flow instruction \verb|fi|
+and a variable \verb|uv| used by it, and it returns a vector of the nearest
+control flow predecessors that define that variable.
+
+\begin{clojurecode}
+(defn find-nearest-definers [fi uv]
+  (loop [preds (mapcat #(adjs % :cfPrev) (if (coll? fi) fi [fi])),
+         r [], known #{}]
+    (if (seq preds)
+      (let [definers (filter #(member? uv (eget % :def)) preds)
+            others   (remove #(member? uv (eget % :def)) preds)]
+        (recur (remove #(member? % known) (mapcat #(adjs % :cfPrev) others))
+               (into r definers) (into known preds)))
+      r)))
+\end{clojurecode}
+
+In Clojure, \verb|loop| and \verb|recur| implement a local tail-recursion, that
+is, inside a \verb|loop| a \verb|recur| form recurses not to the surrounding
+function but to the surrounding \verb|loop|.  Initially, \verb|preds| is bound
+to the immediate control flow predecessors of \verb|fi|, the result variable
+\verb|r| is bound to the empty vector, and \verb|known| is bound to the empty
+set.
+
+If there are no predecessors, the result \verb|r| is returned (the else-branch
+of the if).  If there are control flow predecessors, those are sorted into
+\verb|definers|, i.e., flow instructions that define \verb|uv|.  The other
+predecessors are sorted into \verb|others|, i.e., flow instructions that don't
+write \verb|uv|.
+
+Then it is recursed to the surrounding \verb|loop|.  \verb|preds| is rebound to
+those control flow predecessors of \verb|others| that aren't already known in
+order not to recurse infinitely in case of control flow cycles, the result
+vector \verb|r| is rebound to the current \verb|r| value plus the new
+\verb|definers|, and \verb|known| is rebound to the union of the current
+\verb|known| value and the current \verb|preds|.
+
+The complete data flow transformation consists of 18 lines of code.
+
+
+\paragraph{Task 4: Control and Data Flow Validation.}
+\label{sec:task-4}
+
+The goal of task 4 is to enable offloading testing effort for the
+transformations solving tasks 1 to 3 to programmers knowing only Java by
+equipping them with some easy to use DSL.  The next listing shows an example
+validation specification as provided by the FunnyQT solution.
+
+\begin{clojurecode*}{linenos=false}
+(make-test test-fg-transform-test0 "models/Test0.java.xmi"
+           #{["testMethod()"   "int a = 1;"]     ;; expected cfNext links
+             ;;...
+             ["return b * c;"  "Exit"]}
+           #{["int a = 1;"     "int c = a + b;"] ;; expected dfNext links
+             ;;...
+             ["b = a - b;"     "return b * c;"]})
+\end{clojurecode*}
+
+The FunnyQT solution uses Clojure's metaprogramming facilities to create an
+\emph{internal validation DSL}.  \verb|make-test| is a \emph{macro}.  A macro
+is a function that will be called by the Clojure compiler at compile-time.  It
+receives the unevaluated arguments given to it, that is, its parameters are
+bound to code.  Clojure, like all Lisps, is \emph{homoiconic}, meaning that
+code is represented using usual Clojure data structures, e.g., lists, vectors,
+symbols, literals, etc.  Thus, the macro is able to transform the code provided
+to it using standard Clojure functions to some new bunch of code that takes its
+place.  Here, \verb|make-test| will create a unit test that loads the provided
+model and compares it against the expected control and data flow links.
+
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+
+In this section, the FunnyQT solution to the Flowgraphs case is evaluated
+according to the critera listed in the case description
+\cite{flowgraphcasedesc}.
+
+All four tasks have been solved, and the results of every task are complete and
+correct.  The FunnyQT solution consists of 335 lines of code excluding comments
+and empty lines, making it the shortest of all provided solutions.  It is also
+the solution with the best performance and has won the \emph{best efficiency
+  award} for this case.
+
+
+
+\bibliographystyle{eptcs}
+\bibliography{ttc13-funnyqt-flowgraph}
+
+
+\end{document}
+
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-engine: pdflatex-shell-escape
+%%% TeX-master: t
+%%% End:
