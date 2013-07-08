@@ -115,11 +115,11 @@ implementation for JaMoPP elements of type \verb|AssignmentExpression|:
 The \verb|child| of the assignment expression is some variable, the assignment
 operator is one of \verb|=|, \verb|+=|, \verb|-=|, \verb|*=|, or \verb|/=|, and
 \verb|value| is an arbitrary expression.  These three components are converted
-to strings using \verb|stmt2str| which are then concatenated.
+to strings using \verb|stmt2str| again which are then concatenated.
 
 All in all, the polymorphic \verb|stmt2str| function consists of 22
-implementations for various JaMoPP metamodel types accounting to 107 lines of
-code.  The complete model-to-text transformation is printed in
+implementations for various JaMoPP metamodel types accounting to a total of 107
+lines of code.  The complete model-to-text transformation is printed in
 Appendix~\ref{sec:complete-jamopp-text}.
 
 
@@ -185,7 +185,8 @@ next listing.
 This concept is quite similar to mapping disjunction in QVT Operational
 Mappings.  When this rule is called, the rules specified in the
 \verb|:generalizes| vector are tried one after the other, and the first
-applicable one is applied, and its result is returned.
+applicable one is applied, and its result is returned.  Furthermore, a
+generalizing rule also combines the traceability mappings of all subrules.
 
 The complete \verb|java2flowgraph| model-to-model transformation consists of 15
 rules with 93 lines of code in total.  It is printed in
@@ -262,7 +263,7 @@ breaking to this label.
 \end{clojurecode*}
 
 If the current element is a break statement, two cases have to be
-distinguished.  If the break is labled, a control flow link is added to the
+distinguished.  If the break is labeled, a control flow link is added to the
 first flow instruction of the statement following the label which can be looked
 up in the \verb|label-succ-map|.  If the break is not labled, a control flow
 link is added to the first flow instruction in the statement following the
@@ -319,9 +320,8 @@ set.
 
 If there are no predecessors, the result \verb|r| is returned (the else-branch
 of the if).  If there are control flow predecessors, those are sorted into
-\verb|definers|, i.e., flow instructions that define \verb|uv|.  The other
-predecessors are sorted into \verb|others|, i.e., flow instructions that don't
-write \verb|uv|.
+\verb|definers| and \verb|others|, i.e., flow instructions that write to
+\verb|uv|, and flow instructions that don't write to \verb|uv|, respectively.
 
 Then it is recursed to the surrounding \verb|loop|.  \verb|preds| is rebound to
 those control flow predecessors of \verb|others| that aren't already known in
