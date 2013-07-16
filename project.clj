@@ -7,4 +7,5 @@
             :url "http://www.gnu.org/licenses/gpl.html"
             :distribution :repo}
   :warn-on-reflection true
+  :jvm-opts ^:replace ["-Xms800m" "-Xmx800m"]
   :jar-exclusions [#"(?:^|/).(svn|hg|git|tg|tg\.gz|xmi|xmi\.gz)/"])
