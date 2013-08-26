@@ -18,7 +18,7 @@
 
 
 \title{Solving the TTC 2013 Flowgraphs Case with FunnyQT}
-\author{Dipl.-Inform. Tassilo Horn
+\author{Tassilo Horn
   \email{horn@uni-koblenz.de}
   \institute{Institute for Software Technology, University Koblenz-Landau, Germany}}
 
@@ -49,8 +49,8 @@ implemented as an API for the functional, JVM-based Lisp-dialect Clojure.  It
 provides several sub-APIs for implementing different kinds of queries and
 transformations.  For example, there is a model-to-model transformation API,
 and there is an in-place transformation API for writing programmed graph
-transformations.  FunnyQT currently supports EMF and JGraLab models, and it can
-be extended to other modeling frameworks, too.
+transformations.  FunnyQT currently works with EMF and JGraLab models, and it
+can be extended to other modeling frameworks, too.
 
 For solving the tasks of this transformation case\footnote{This FunnyQT
   solution is available at \url{https://github.com/tsdh/ttc-2013-flowgraphs}
@@ -86,7 +86,7 @@ function API.  A polymorphic function is a function that is declared once, and
 then arbitrary many implementations for concrete metamodel types can be added.
 When a polymorphic function is called, the actual implementation is determined
 similarly to the typical dispatch in object-oriented programming languages.  If
-there's no implementation provided for the element's type or one of its
+there is no implementation provided for the element's type or one of its
 supertypes, an exception is thrown.
 
 The function \verb|stmt2str| implements the model-to-text transformation
@@ -139,7 +139,7 @@ The transformation starts by defining its name and input and output models.
 There could be arbitrary many input and output models, and they could be of
 different kinds, e.g., a transformation could receive a JGraLab TGraph and some
 EMF model, and create an output EMF model.  Here, it gets only the JaMoPP EMF
-input model which is bound the the variable \verb|in|, and one single structure
+input model which is bound the variable \verb|in|, and one single structure
 graph output model bound to \verb|out|, which is also an EMF model.
 
 In the body of such a transformation, arbitrary many rules may be defined.  The
@@ -209,10 +209,10 @@ method's statements.  In the general case, every flow instruction in that
 sequence has to be connected with the immediately following flow instruction in
 the sequence.  For various kinds of statements, special rules are needed.  For
 example, when encountering a block in the sequence (which is no flow
-instruction), the the block is replaced with its contents.
+instruction), the block is replaced with its contents.
 
 Since the next statement in the sequence might not be a flow instruction but
-some structured statement like a block, an if-statement, or a loop, there's a
+some structured statement like a block, an if-statement, or a loop, there is a
 helper function \verb|cf-peek|.  It receives some element and returns either
 this element if it is a flow instruction, or otherwise the first flow
 instruction inside this element.
@@ -290,10 +290,10 @@ printed in Appendix~\ref{sec:compl-contr-flow}.
 The purpose of this task is to create \verb|dfNext| links between
 \verb|FlowInst| elements where the target element is a control flow successor
 of the source element, the target element uses (reads) a variable that was
-defined (written) by the source element, and the variable hasn't been rewritten
-in between.  This definition has been implemented exactly as stated here,
-because although it's not the most efficient algorithm for the task, it is very
-clear and concise.
+defined (written) by the source element, and the variable has not been
+rewritten in between.  This definition has been implemented exactly as stated
+here, because although it's not the most efficient algorithm for the task, it
+is very clear and concise.
 
 The function \verb|find-nearest-definers| receives a flow instruction \verb|fi|
 and a variable \verb|uv| used by it, and it returns a vector of the nearest
@@ -321,7 +321,7 @@ set.
 If there are no predecessors, the result \verb|r| is returned (the else-branch
 of the if).  If there are control flow predecessors, those are sorted into
 \verb|definers| and \verb|others|, i.e., flow instructions that write to
-\verb|uv|, and flow instructions that don't write to \verb|uv|, respectively.
+\verb|uv|, and flow instructions that do not write to \verb|uv|, respectively.
 
 Then it is recursed to the surrounding \verb|loop|.  \verb|preds| is rebound to
 those control flow predecessors of \verb|others| that aren't already known in
