@@ -82,11 +82,11 @@ JaMoPP model is described.
 
 This model-to-text transformation is implemented using FunnyQT's polymorphic
 function API.  A polymorphic function is a function that is declared once, and
-then arbitrary many implementations for concrete metamodel types can be added.
-When a polymorphic function is called, the actual implementation is determined
-similarly to the typical dispatch in object-oriented programming languages.  If
-there is no implementation provided for the element's type or one of its
-supertypes, an exception is thrown.
+then arbitrarily many implementations for concrete metamodel types can be
+added.  When a polymorphic function is called, the actual implementation is
+determined similarly to the typical dispatch in object-oriented programming
+languages.  If there is no implementation provided for the element's type or
+one of its supertypes, an exception is thrown.
 
 The function \verb|stmt2str| implements the model-to-text transformation
 required for solving task~1.  It is declared as follows.
@@ -104,10 +104,11 @@ implementation for JaMoPP elements of type \verb|AssignmentExpression|:
 
 \input{lst/02}
 
-The \verb|child| of the assignment expression is some variable, the assignment
-operator is one of \verb|=|, \verb|+=|, \verb|-=|, \verb|*=|, or \verb|/=|, and
-\verb|value| is an arbitrary expression.  These three components are converted
-to strings using \verb|stmt2str| again which are then concatenated.
+The \verb|child| of the assignment expression is some variable, the
+\verb|assignmentOperator| is one of \verb|=|, \verb|+=|, \verb|-=|, \verb|*=|,
+or \verb|/=|, and \verb|value| is an arbitrary expression.  These three
+components are converted to strings using \verb|stmt2str| again which are then
+concatenated.
 
 All in all, the polymorphic \verb|stmt2str| function consists of 22
 implementations for various JaMoPP metamodel types accounting to a total of 107
@@ -126,14 +127,14 @@ The transformation starts by defining its name and input and output models.
 
 \input{lst/03}
 
-There could be arbitrary many input and output models, and they could be of
+There could be arbitrarily many input and output models, and they could be of
 different kinds, e.g., a transformation could receive a JGraLab TGraph and some
 EMF model, and create an output EMF model.  Here, it gets only the JaMoPP EMF
-input model which is bound the variable \verb|in|, and one single structure
+input model which is bound to the variable \verb|in|, and one single structure
 graph output model bound to \verb|out|, which is also an EMF model.
 
-In the body of such a transformation, arbitrary many rules may be defined.  The
-first one is the \verb|method2method| rule shown in the next listing.  The
+In the body of such a transformation, arbitrarily many rules may be defined.
+The first one is the \verb|method2method| rule shown in the next listing.  The
 \verb|^:top| metadata preceeding the rule name specifies that the rule is a
 top-level rule.  Such rules are applied to all matching elements by the
 transformation itself, whereas non-top-level rules have to be called explicitly
@@ -141,20 +142,21 @@ from a top-level rule (directly or indirectly).
 
 \input{lst/04}
 
-It receives a JaMoPP model element \verb|m|.  The \verb|:from| clause dictates
-that \verb|m| must be of type \verb|ClassMethod| in order for the rule to be
-applicable.  The \verb|:to| clause declares the objects to be created.  Here,
-for a given JaMoPP method, a corresponding flowgraph method and its exit object
-are created.  The remainder of the rule is its body containing arbitrary code
-to set attributes and references.  Here, the \verb|txt| attribute of the new
-method and its exit are set, the former using the polymorphic \verb|stmt2str|
-function discussed above.  The method's \verb|stmts| reference is set by
-applying another rule, \verb|stmt2item|, to the statements of the JaMoPP
-method.  Likewise, the method's parameters are transformed by mapping them to
-the \verb|param2param| rule for setting the method's \verb|def| reference.
+The rule receives a JaMoPP model element \verb|m|.  The \verb|:from| clause
+dictates that \verb|m| must be of type \verb|ClassMethod| in order for the rule
+to be applicable.  The \verb|:to| clause declares the objects to be created.
+Here, for a given JaMoPP method, a corresponding flowgraph method and its exit
+object are created.  The remainder of the rule is its body containing arbitrary
+code to set attributes and references.  Here, the \verb|txt| attribute of the
+new method and its exit are set, the former using the polymorphic
+\verb|stmt2str| function discussed above.  The method's \verb|stmts| reference
+is set by applying another rule, \verb|stmt2item|, to the statements of the
+JaMoPP method.  Likewise, the method's parameters are transformed by mapping
+them to the \verb|param2param| rule for setting the method's \verb|def|
+reference.
 
-A special kind of rules are generalizing rules such as the one shown in the
-next listing.
+Special kinds of rules are generalizing rules such as the one shown in the next
+listing.
 
 \input{lst/05}
 
@@ -194,12 +196,12 @@ this element if it is a flow instruction, or otherwise the first flow
 instruction inside this element.
 
 The function \verb|cf-synth| synthesizing the control flow links using the
-algorithm sketched above is explained in the next listings.  It receives the
-sequence of statements \verb|v|, the method's \verb|Exit| node \verb|exit|, the
-current loop's test expression (\verb|loop-expr|), the statement following the
-current loop (\verb|loop-succ|), and a map \verb|label-succ-map| that assigns
-to each label reachable in the current scope the statement following the
-labeled statement.  The \verb|exit| parameter is used for handling return
+algorithm sketched above is explained in the next four listings.  It receives
+the sequence of statements \verb|v|, the method's \verb|Exit| node \verb|exit|,
+the current loop's test expression (\verb|loop-expr|), the statement following
+the current loop (\verb|loop-succ|), and a map \verb|label-succ-map| that
+assigns to each label reachable in the current scope the statement following
+the labeled statement.  The \verb|exit| parameter is used for handling return
 statements, and the last three parameters are used for handling break and
 continue statements.  Initially, the function is called with \verb|v| only
 containing the method, and \verb|exit| bound to that method's exit.  All other
