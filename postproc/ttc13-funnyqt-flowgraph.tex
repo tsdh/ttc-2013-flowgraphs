@@ -7,15 +7,14 @@
 \usepackage[T1]{fontenc}
 \usepackage{hyperref}
 \usepackage{paralist}
-\usepackage{verbatim}
+\usepackage{fancyvrb}
+
+\usepackage{color}
+\input{pyg}
 
 \makeatletter
 \def\verbatim@font{\ttfamily\small}
 \makeatother
-
-\usepackage{minted}
-\newminted{clojure}{fontsize=\footnotesize}
-
 
 \title{Solving the TTC 2013 Flowgraphs Case with FunnyQT}
 \author{Tassilo Horn
@@ -92,9 +91,7 @@ supertypes, an exception is thrown.
 The function \verb|stmt2str| implements the model-to-text transformation
 required for solving task~1.  It is declared as follows.
 
-\begin{clojurecode}
-(declare-polyfn stmt2str [elem])
-\end{clojurecode}
+\input{lst/01}
 
 \verb|declare-polyfn| declares a new polymorphic function.  Its name is
 \verb|stmt2str|, and it receives exactly one parameter \verb|elem|.  Its task
@@ -105,12 +102,7 @@ After the polymorphic function has been declared, implementations for concrete
 metamodel types can be added using \verb|defpolyfn|.  For example, this is the
 implementation for JaMoPP elements of type \verb|AssignmentExpression|:
 
-\begin{clojurecode}
-(defpolyfn stmt2str 'expressions.AssignmentExpression [ae]
-  (str (stmt2str (eget ae :child)) " "
-       (stmt2str (eget ae :assignmentOperator)) " "
-       (stmt2str (eget ae :value))))
-\end{clojurecode}
+\input{lst/02}
 
 The \verb|child| of the assignment expression is some variable, the assignment
 operator is one of \verb|=|, \verb|+=|, \verb|-=|, \verb|*=|, or \verb|/=|, and
@@ -132,9 +124,7 @@ and \verb|Param| objects as requested by task~3.1.
 
 The transformation starts by defining its name and input and output models.
 
-\begin{clojurecode*}{firstnumber=5}
-(deftransformation java2flowgraph [[in :emf] [out :emf]]
-\end{clojurecode*}
+\input{lst/03}
 
 There could be arbitrary many input and output models, and they could be of
 different kinds, e.g., a transformation could receive a JGraLab TGraph and some
@@ -149,16 +139,7 @@ top-level rule.  Such rules are applied to all matching elements by the
 transformation itself, whereas non-top-level rules have to be called explicitly
 from a top-level rule (directly or indirectly).
 
-\begin{clojurecode*}{firstnumber=6}
-  (^:top method2method [m]
-         :from 'members.ClassMethod
-         :to [fgm 'flowgraph.Method, ex 'flowgraph.Exit]
-         (eset! fgm :txt (stmt2str m)) ;; Invoke the model-to-text transformation
-         (eset! ex :txt "Exit")
-         (eset! fgm :exit ex)
-         (eset! fgm :stmts (map stmt2item (eget m :statements)))  ;; transform the statements
-         (eset! fgm :def (map param2param (eget m :parameters)))) ;; transform the parameters
-\end{clojurecode*}
+\input{lst/04}
 
 It receives a JaMoPP model element \verb|m|.  The \verb|:from| clause dictates
 that \verb|m| must be of type \verb|ClassMethod| in order for the rule to be
@@ -175,12 +156,7 @@ the \verb|param2param| rule for setting the method's \verb|def| reference.
 A special kind of rules are generalizing rules such as the one shown in the
 next listing.
 
-\begin{clojurecode*}{firstnumber=15}
-  (stmt2item [stmt]
-      :generalizes [local-var-stmt2simple-stmt condition2if block2block
-                    return2return while-loop2loop break2break continue2continue
-                    label2label stmt2simple-stmt])
-\end{clojurecode*}
+\input{lst/05}
 
 This concept is quite similar to mapping disjunction in QVT Operational
 Mappings.  When this rule is called, the rules specified in the
@@ -229,12 +205,7 @@ continue statements.  Initially, the function is called with \verb|v| only
 containing the method, and \verb|exit| bound to that method's exit.  All other
 parameters are \verb|nil|.
 
-\begin{clojurecode*}{firstnumber=5}
-(defn cf-synth [v exit loop-expr loop-succ label-succ-map]
-  (when (seq v)
-    (let [[el & [n & _ :as tail]] v]
-      (type-case el
-\end{clojurecode*}
+\input{lst/06}
 
 If the sequence \verb|v| is not empty, its first element is bound to \verb|el|,
 and its rest is bound to \verb|tail|.  Furthermore, the first element of the
@@ -245,11 +216,7 @@ metamodel type.  For example, if the element is a method, a control flow link
 to that method's first flow instruction is created, and the function recurses
 with the method's statements.
 
-\begin{clojurecode*}{firstnumber=9}
-        'flowgraph.Method (let [stmts (econtents el)]
-                            (eadd! el :cfNext (cf-peek (first stmts)))
-                            (recur stmts exit nil nil nil))
-\end{clojurecode*}
+\input{lst/07}
 
 If the current element is a label, the function recurses with that label's
 statement prepended to the tail of the sequence.  A mapping from this label to
@@ -257,10 +224,7 @@ its following statement is added to the \verb|label-succ-map|.  This
 statement's first flow instruction is where the control flow continues when
 breaking to this label.
 
-\begin{clojurecode*}{firstnumber=22}
-        'flowgraph.Label (recur (cons (eget el :stmt) tail) exit loop-expr loop-succ
-                                (assoc label-succ-map el n))
-\end{clojurecode*}
+\input{lst/08}
 
 If the current element is a break statement, two cases have to be
 distinguished.  If the break is labeled, a control flow link is added to the
@@ -272,12 +236,7 @@ surrounding loop which is bound to \verb|loop-succ|.
 In any case, the function recurses with the tail of the sequence keeping all
 other parameters as-is.
 
-\begin{clojurecode*}{firstnumber=28}
-        'flowgraph.Break (do (if-let [l (eget el :label)]
-                               (eadd! el :cfNext (cf-peek (label-succ-map l)))
-                               (eadd! el :cfNext (cf-peek loop-succ)))
-                           (recur tail exit loop-expr loop-succ label-succ-map))
-\end{clojurecode*}
+\input{lst/09}
 
 There are similar cases for handling objects of the other metamodel types.  The
 complete control flow transformation consists of 57 lines of code and is
@@ -299,17 +258,7 @@ The function \verb|find-nearest-definers| receives a flow instruction \verb|fi|
 and a variable \verb|uv| used by it, and it returns a vector of the nearest
 control flow predecessors that define that variable.
 
-\begin{clojurecode}
-(defn find-nearest-definers [fi uv]
-  (loop [preds (mapcat #(adjs % :cfPrev) (if (coll? fi) fi [fi])),
-         r [], known #{}]
-    (if (seq preds)
-      (let [definers (filter #(member? uv (eget % :def)) preds)
-            others   (remove #(member? uv (eget % :def)) preds)]
-        (recur (remove #(member? % known) (mapcat #(adjs % :cfPrev) others))
-               (into r definers) (into known preds)))
-      r)))
-\end{clojurecode}
+\input{lst/10}
 
 In Clojure, \verb|loop| and \verb|recur| implement a local tail-recursion, that
 is, inside a \verb|loop| a \verb|recur| form recurses not to the surrounding
@@ -346,15 +295,7 @@ transformations solving tasks 1 to 3 to programmers knowing only Java by
 equipping them with some easy to use DSL.  The next listing shows an example
 validation specification as provided by the FunnyQT solution.
 
-\begin{clojurecode}
-(make-test test-fg-transform-test0 "models/Test0.java.xmi"
-           #{["testMethod()"   "int a = 1;"]     ;; expected cfNext links
-             ;; more [cf-predecessor cf-successor] tuples
-             ["return b * c;"  "Exit"]}
-           #{["int a = 1;"     "int c = a + b;"] ;; expected dfNext links
-             ;; more [df-predecessor df-successor] tuples
-             ["b = a - b;"     "return b * c;"]})
-\end{clojurecode}
+\input{lst/11}
 
 The FunnyQT solution uses Clojure's metaprogramming facilities to create an
 \emph{internal validation DSL}.  \verb|make-test| is a \emph{macro}.  A macro
@@ -397,394 +338,33 @@ programming.
 \section{The complete JaMoPP-to-Text Transformation}
 \label{sec:complete-jamopp-text}
 
-\begin{clojurecode*}{linenos}
-(declare-polyfn stmt2str [elem])
-
-(defn reduce-str [els]
-  (reduce #(str %1 (stmt2str %2)) "" els))
-
-(defpolyfn stmt2str 'members.ClassMethod [method]
-  (str (eget method :name) "()"))
-
-(defpolyfn stmt2str 'types.PrimitiveType [^org.eclipse.emf.ecore.EObject pt]
-  (clojure.string/lower-case (.getName (.eClass pt))))
-
-(defpolyfn stmt2str 'statements.LocalVariableStatement [lv]
-  (let [v (eget lv :variable)]
-    (str (stmt2str (eget v :typeReference)) " " (stmt2str v)
-         (when-let [iv (eget v :initialValue)]
-           (str " = " (stmt2str iv)))
-         ";")))
-
-(defpolyfn stmt2str 'references.IdentifierReference [ir]
-  (stmt2str (eget ir :target)))
-
-(defpolyfn stmt2str 'variables.Variable [v]
-  (eget v :name))
-
-(defpolyfn stmt2str 'expressions.MultiplicativeExpression [me]
-  (let [[c1 c2] (eget me :children)]
-    (str (stmt2str c1) " " (reduce-str (eget me :multiplicativeOperators))
-         " " (stmt2str c2))))
-
-(defpolyfn stmt2str 'expressions.EqualityExpression [ee]
-  (let [[c1 c2] (eget ee :children)]
-    (str (stmt2str c1) " " (reduce-str (eget ee :equalityOperators))
-         " " (stmt2str c2))))
-
-(defpolyfn stmt2str 'expressions.AdditiveExpression [ae]
-  (let [[c1 c2] (eget ae :children)]
-    (str (stmt2str c1) " " (reduce-str (eget ae :additiveOperators))
-         " " (stmt2str c2))))
-
-(defpolyfn stmt2str 'expressions.UnaryExpression [ue]
-  (str (reduce-str (eget ue :operators))
-       (stmt2str (eget ue :child))))
-
-(defpolyfn stmt2str 'expressions.AssignmentExpression [ae]
-  (str (stmt2str (eget ae :child)) " "
-       (stmt2str (eget ae :assignmentOperator)) " "
-       (stmt2str (eget ae :value))))
-
-(defpolyfn stmt2str 'expressions.RelationExpression [re]
-  (let [[c1 c2] (eget re :children)]
-    (str (stmt2str c1) " "
-         (reduce-str (eget re :relationOperators))
-         " " (stmt2str c2))))
-
-(defpolyfn stmt2str 'expressions.SuffixUnaryModificationExpression [se]
-  (str (stmt2str (eget se :child))
-       (stmt2str (eget se :operator))))
-
-(defpolyfn stmt2str 'statements.Block [b]
-  "\\{...\\}")
-
-(defpolyfn stmt2str 'statements.Condition [c]
-  "if")
-
-(defpolyfn stmt2str 'statements.WhileLoop [c]
-  "while")
-
-(defpolyfn stmt2str 'statements.JumpLabel [l]
-  (str (eget l :name) ":"))
-
-(defpolyfn stmt2str 'statements.Break [b]
-  (str "break"
-       (when-let [l (eget b :target)]
-         (str " " (eget l :name)))
-       ";"))
-
-(defpolyfn stmt2str 'statements.Continue [c]
-  (str "continue"
-       (when-let [l (eget c :target)]
-         (str " " (eget l :name)))
-       ";"))
-
-(defpolyfn stmt2str 'statements.Return [r]
-  (str "return" (when-let [rv (eget r :returnValue)]
-                  (str " " (stmt2str rv)))
-       ";"))
-
-(defpolyfn stmt2str 'statements.ExpressionStatement [stmt]
-  (str (stmt2str (eget stmt :expression)) ";"))
-
-(defpolyfn stmt2str 'operators.Operator [op]
-  (type-case op
-    'operators.Multiplication "*"
-    'operators.Subtraction    "-"
-    'operators.Addition       "+"
-    'operators.Division       "/"
-    'operators.LessThan       "<"
-    'operators.GreaterThan    ">"
-    'operators.Assignment     "="
-    'operators.MinusMinus     "--"
-    'operators.PlusPlus       "++"
-    'operators.AssignmentPlus "+="
-    'operators.Equal          "=="))
-
-(defpolyfn stmt2str 'literals.Literal [l]
-  (type-case l
-    'literals.DecimalIntegerLiteral (eget l :decimalValue)))
-\end{clojurecode*}
+\input{lst/complete-jamopp-to-text}
 
 \section{The complete JaMoPP-to-StructureGraph Transformation}
 \label{sec:compl-jamopp-struct}
 
-\begin{clojurecode*}{linenos}
-(defn used-vars [s]
-  (reachables s [p-seq [p-* <>--]
-                 [p-restr 'references.IdentifierReference]
-                 :target]))
-
-(deftransformation java2flowgraph [[in :emf] [out :emf]]
-  (^:top method2method [m]
-      :from 'members.ClassMethod
-      :to [fgm 'flowgraph.Method, ex 'flowgraph.Exit]
-      (eset! fgm :txt (stmt2str m))
-      (eset! ex :txt "Exit")
-      (eset! fgm :stmts (map stmt2item (seq (eget m :statements))))
-      (eset! fgm :exit ex)
-      (eset! fgm :def (map param2param (eget m :parameters))))
-  (stmt2item [stmt]
-      :generalizes [local-var-stmt2simple-stmt condition2if block2block
-                    return2return while-loop2loop break2break continue2continue
-                    label2label stmt2simple-stmt])
-  (var-creating-rule [v]
-      :generalizes [param2param local-var2var])
-  (param2param [p]
-      :from 'parameters.Parameter
-      :to [fgp 'flowgraph.Param]
-      (eset! fgp :txt (stmt2str p)))
-  (local-var2var [lv]
-      :from 'variables.LocalVariable
-      :to [fgv 'flowgraph.Var]
-      (eset! fgv :txt (stmt2str lv)))
-  (local-var-stmt2simple-stmt [lv]
-      :from 'statements.LocalVariableStatement
-      :to [fgss 'flowgraph.SimpleStmt]
-      (let [v (local-var2var (adj lv :variable))]
-        (eset! fgss :txt (stmt2str lv))
-        (eadd! fgss :def v)
-        (eset! fgss :use (map var-creating-rule
-                              (used-vars (adj lv :variable :initialValue))))))
-  (stmt2simple-stmt [s]
-      :from 'statements.Statement
-      :to [fgss 'flowgraph.SimpleStmt]
-      (eset! fgss :txt (stmt2str s))
-      (doseq [aex  (reachables s [p-seq [p-* <>--]
-                                  [p-restr 'expressions.AssignmentExpression]])]
-        (eadd! fgss :def (var-creating-rule (the (used-vars (adj aex :child)))))
-        (eaddall! fgss :use (map var-creating-rule (used-vars (adj aex :value)))))
-      (doseq [umex (reachables s [p-seq [p-* <>--]
-                                  [p-restr 'expressions.UnaryModificationExpression]])]
-        (let [var (var-creating-rule (the (used-vars (adj umex :child))))]
-          (eadd! fgss :def var)
-          (eadd! fgss :use var))))
-  (label2label [l]
-      :from 'statements.JumpLabel
-      :to [fgl 'flowgraph.Label]
-      (eset! fgl :txt (stmt2str l))
-      (eset! fgl :stmt (stmt2item (eget l :statement))))
-  (expression2expr [ex]
-      :from 'expressions.Expression
-      :to [fgex 'flowgraph.Expr]
-      (eset! fgex :txt (stmt2str ex))
-      (eset! fgex :use (map var-creating-rule (used-vars ex))))
-  (condition2if [c]
-      :from 'statements.Condition
-      :to [fgif 'flowgraph.If]
-      (eset! fgif :txt (stmt2str c))
-      (eset! fgif :expr (expression2expr (eget c :condition)))
-      (eset! fgif :then (stmt2item (eget c :statement)))
-      (when-let [else (eget c :elseStatement)]
-        (eset! fgif :else (stmt2item else))))
-  (block2block [b]
-      :from 'statements.Block
-      :to [fgb 'flowgraph.Block]
-      (eset! fgb :txt (stmt2str b))
-      (eset! fgb :stmts (map stmt2item (eget b :statements))))
-  (return2return [r]
-      :from 'statements.Return
-      :to [fgr 'flowgraph.Return]
-      (eset! fgr :txt (stmt2str r))
-      (eset! fgr :use (map var-creating-rule (used-vars r))))
-  (break2break [b]
-      :from 'statements.Break
-      :to [fgb 'flowgraph.Break]
-      (eset! fgb :txt (stmt2str b))
-      (eset! fgb :label (label2label (eget b :target))))
-  (continue2continue [c]
-      :from 'statements.Continue
-      :to [fgc 'flowgraph.Continue]
-      (eset! fgc :txt (stmt2str c))
-      (eset! fgc :label (label2label (eget c :target))))
-  (while-loop2loop [wl]
-      :from 'statements.WhileLoop
-      :to   [fgl 'flowgraph.Loop]
-      (eset! fgl :txt (stmt2str wl))
-      (eset! fgl :expr (expression2expr (eget wl :condition)))
-      (eset! fgl :body (stmt2item (eget wl :statement)))))
-\end{clojurecode*}
+\input{lst/complete-jamopp-to-structure-graph}
 
 \section{The complete Control Flow Transformation}
 \label{sec:compl-contr-flow}
 
-\begin{clojurecode*}{linenos}
-(defn cf-peek [el]
-  (if (has-type? el 'flowgraph.FlowInstr)
-    el
-    (recur (first (econtents el)))))
-
-(defn cf-synth [v exit loop-expr loop-succ label-succ-map]
-  (when (seq v)
-    (let [[el & [n & _ :as tail]] v]
-      (type-case el
-        'flowgraph.Method
-                   (let [stmts (econtents el)]
-                     (eadd! el :cfNext (cf-peek (first stmts)))
-                     (recur stmts exit nil nil nil))
-        'flowgraph.SimpleStmt
-                   (do (when n (eadd! el :cfNext (cf-peek n)))
-                       (recur tail exit loop-expr loop-succ label-succ-map))
-        'flowgraph.Block
-                   (recur (concat (econtents el) tail)
-                          exit loop-expr loop-succ label-succ-map)
-        'flowgraph.Expr
-                   (do (when n (eadd! el :cfNext (cf-peek n)))
-                       (recur tail exit loop-expr loop-succ label-succ-map))
-        'flowgraph.Label
-                   (recur (cons (eget el :stmt) tail) exit loop-expr loop-succ
-                          (assoc label-succ-map el n))
-        'flowgraph.Return
-                   (do (eadd! el :cfNext exit)
-                       (recur tail exit loop-expr loop-succ label-succ-map))
-        'flowgraph.Break
-                   (do (if-let [l (eget el :label)]
-                         (eadd! el :cfNext (cf-peek (label-succ-map l)))
-                         (eadd! el :cfNext (cf-peek loop-succ)))
-                       (recur tail exit loop-expr loop-succ label-succ-map))
-        'flowgraph.Continue
-                   (do (if-let [l (eget el :label)]
-                         (eadd! el :cfNext (cf-peek l))
-                         (eadd! el :cfNext loop-expr))
-                       (recur tail exit loop-expr loop-succ label-succ-map))
-        'flowgraph.Loop
-                   (let [[expr body] (econtents el)]
-                     (recur (cons expr (cons body (cons expr tail)))
-                            exit expr n label-succ-map))
-        'flowgraph.If
-                   (let [[expr then else] (econtents el)]
-                     (cf-synth [expr then (cf-peek n)]
-                               exit loop-expr loop-succ label-succ-map)
-                     (if else
-                       (recur (cons expr (cons else tail))
-                              exit loop-expr loop-succ label-succ-map)
-                       (recur (cons expr tail)
-                              exit loop-expr loop-succ label-succ-map)))
-        'flowgraph.Exit (assert (nil? n))))))
-
-(defn synthesize-cf-edges [model]
-  (doseq [m (eallobjects model 'flowgraph.Method)
-          :let [exit (the (eallobjects model 'flowgraph.Exit))]]
-    (cf-synth [m] exit nil nil nil)))
-\end{clojurecode*}
+\input{lst/complete-cf}
 
 \section{The complete Data Flow Transformation}
 \label{sec:complete-data-flow}
 
-\begin{clojurecode*}{linenos}
-(defn find-nearest-definers [fi uv]
-  (loop [preds (mapcat #(adjs % :cfPrev) (if (coll? fi) fi [fi]))
-         r []
-         known #{}]
-    (if (seq preds)
-      (let [definers (filter #(member? uv (eget % :def)) preds)
-            others   (remove #(member? uv (eget % :def)) preds)]
-        (recur (remove #(member? % known) (mapcat #(adjs % :cfPrev) others))
-               (into r definers)
-               (into known preds)))
-      r)))
-
-(defn synthesize-df-edges [model]
-  (doseq [fi (eallobjects model 'flowgraph.FlowInstr)
-          used-var (eget fi :use)
-          nearest-definer (find-nearest-definers fi used-var)]
-    (eadd! nearest-definer :dfNext fi))
-  (doseq [v (vec (eallobjects model 'Var))]
-    (edelete! v)))
-\end{clojurecode*}
+\input{lst/complete-df}
 
 \section{The complete Validation DSL Implementation}
 \label{sec:compl-valid-dsl}
 
-\begin{clojurecode*}{linenos}
-(defn run-flowgraph-transformations [file]
-  (System/gc)
-  (println "Running Transformation on" file)
-  (print "Load Time: ")
-  (let [jamopp-model (time (load-model file))
-        outfile (str/replace (str/replace file "models/" "results/")
-                             ".java.xmi" ".xmi")
-        outvizfile (str/replace outfile ".xmi" ".pdf")
-        fg-trg (new-model)]
-    (println "Execution Times:")
-    (print "  - JaMoPP to StructureGraph (with Vars): ")
-    (time (java2flowgraph jamopp-model fg-trg))
-    (print "  - Control Flow Analysis:                ")
-    (time (synthesize-cf-edges fg-trg))
-    (print "  - Data Flow Analysis:                   ")
-    (time (synthesize-df-edges fg-trg))
-    (save-model fg-trg outfile)
-    (when (< (count (eallobjects fg-trg)) 80)
-      (print-model fg-trg outvizfile))
-    fg-trg))
-
-(defmacro make-test [n file expected-cfs expected-dfs]
-  `(deftest ~n
-     (println "========================================================================")
-     (let [fg-trg# (run-flowgraph-transformations ~file)
-           exp-cfs# ~expected-cfs
-           exp-dfs# ~expected-dfs
-           cfs# (set (map (fn [[s# t#]] [(eget s# :txt) (eget t# :txt)])
-                          (ecrosspairs fg-trg# :cfPrev :cfNext)))
-           dfs# (set (map (fn [[s# t#]] [(eget s# :txt) (eget t# :txt)])
-                          (ecrosspairs fg-trg# nil :dfNext)))]
-       (cond
-        (set? exp-cfs#) (let [cf-d1# (clojure.set/difference exp-cfs# cfs#)
-                              cf-d2# (clojure.set/difference cfs# exp-cfs#)]
-                          (is (empty? cf-d1#) "Missing cf-edges")
-                          (is (empty? cf-d2#) "Too many cf-edges"))
-        (number? exp-cfs#) (do
-                             (println "Only checking number of cfNext links.")
-                             (is (= exp-cfs# (count cfs#))))
-        :else (println "No expected cfNext links given."))
-       (cond
-        (set? exp-dfs#) (let [df-d1# (clojure.set/difference exp-dfs# dfs#)
-                              df-d2# (clojure.set/difference dfs# exp-dfs#)]
-                          (is (empty? df-d1#) "Missing df-edges")
-                          (is (empty? df-d2#) "Too many df-edges"))
-        (number? exp-dfs#) (do
-                             (println "Only checking number of dfNext links.")
-                             (is (= exp-dfs# (count dfs#))))
-        :else (println "No expected dfNext links given.")))))
-\end{clojurecode*}
+\input{lst/complete-validation}
 
 \subsection{Two Example Validation Specifications}
 \label{sec:two-example-valid}
 
-\begin{clojurecode*}{linenos}
-(make-test test-fg-transform-test4 "models/Test4.java.xmi"
-           #{["testMethod()" "int i = 100;"]
-             ["int i = 100;" "i > 0"]
-             ["i > 0"        "Exit"]
-             ["i > 0"        "i > 50"]
-             ["i > 50"       "i--;"]
-             ["i > 50"       "i = i - 10;"]
-             ["i = i - 10;"  "i == 50"]
-             ["i == 50"      "break;"]
-             ["i == 50"      "i > 50"]
-             ["break;"       "i--;"]
-             ["i--;"         "i > 0"]}
-           #{["int i = 100;" "i > 0"]
-             ["int i = 100;" "i > 50"]
-             ["int i = 100;" "i = i - 10;"]
-             ["int i = 100;" "i--;"]
-             ["i = i - 10;"  "i == 50"]
-             ["i = i - 10;"  "i > 50"]
-             ["i = i - 10;"  "i = i - 10;"]
-             ["i = i - 10;"  "i--;"]
-             ["i--;"         "i > 0"]
-             ["i--;"         "i > 50"]
-             ["i--;"         "i = i - 10;"]
-             ["i--;"         "i--;"]})
-
-;; For the large models, only the correct number of cfNext/dfNext links is asserted.
-(make-test test-fg-transform-test9 "models/Test9.java.xmi" 14452 27202)
-\end{clojurecode*}
-
+\input{lst/validation-examples}
 \end{document}
-
-
 
 
 %%% Local Variables:
