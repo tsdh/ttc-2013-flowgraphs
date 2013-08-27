@@ -43,13 +43,15 @@
 \section{Introduction}
 \label{sec:introduction}
 
-\emph{FunnyQT} is a new model querying and transformation approach which is
-implemented as an API for the functional, JVM-based Lisp-dialect Clojure.  It
-provides several sub-APIs for implementing different kinds of queries and
-transformations.  For example, there is a model-to-model transformation API,
-and there is an in-place transformation API for writing programmed graph
-transformations.  FunnyQT currently works with EMF and JGraLab models, and it
-can be extended to other modeling frameworks, too.
+\emph{FunnyQT}\footnote{The FunnyQT homepage:
+  \url{https://github.com/jgralab/funnyqt}} is a new model querying and
+transformation approach which is implemented as an API for the functional,
+JVM-based Lisp-dialect Clojure.  It provides several sub-APIs for implementing
+different kinds of queries and transformations.  For example, there is a
+model-to-model transformation API, and there is an in-place transformation API
+for writing programmed graph transformations.  FunnyQT currently works natively
+with EMF and JGraLab models, i.e., it doesn't use some internal model
+representation, and it can be extended to other modeling frameworks, too.
 
 For solving the tasks of this transformation case\footnote{This FunnyQT
   solution is available at \url{https://github.com/tsdh/ttc-2013-flowgraphs}
@@ -216,7 +218,7 @@ rest (i.e., the second element of the sequence) is bound to \verb|n|.
 After binding these elements, a \verb|type-case| dispatches on \verb|el|'s
 metamodel type.  For example, if the element is a method, a control flow link
 to that method's first flow instruction is created, and the function recurses
-with the method's statements.
+with the method's statements (\verb|recur| is an explicit tail-recursive call).
 
 \input{lst/07}
 
