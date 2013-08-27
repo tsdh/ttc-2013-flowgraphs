@@ -6,11 +6,11 @@
 (deftransformation java2flowgraph [[in :emf] [out :emf]]
   (^:top method2method [m]
       :from 'members.ClassMethod
-      :to [fgm 'flowgraph.Method, ex 'flowgraph.Exit]
+      :to [fgm 'flowgraph.Method, fgex 'flowgraph.Exit]
       (eset! fgm :txt (stmt2str m))
-      (eset! ex :txt "Exit")
+      (eset! fgex :txt "Exit")
       (eset! fgm :stmts (map stmt2item (seq (eget m :statements))))
-      (eset! fgm :exit ex)
+      (eset! fgm :exit fgex)
       (eset! fgm :def (map param2param (eget m :parameters))))
   (stmt2item [stmt]
       :generalizes [local-var-stmt2simple-stmt condition2if block2block
